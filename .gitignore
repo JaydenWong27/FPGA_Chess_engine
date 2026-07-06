@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+
+# Simulation (Verilator/Icarus/etc.)
+*.vcd
+*.fst
+obj_dir/
+*.out
+*.vvp
+sim_build/
+
+# Gowin / FPGA build artifacts
+impl/
+*.bit
+*.fs
+*.rpt
+*.rpt.html
+
+# OS / editor
+.DS_Store
+*.swp
+.vscode/
