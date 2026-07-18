@@ -13,29 +13,6 @@ black_queens = 0x08 << 56
 white_kings = 0x10 << 0
 black_kings = 0x10 << 56
 
-
-pieces = [
-    (white_pawns, "P"), (white_knights, "N"), (white_bishops, "B"),
-    (white_rooks, "R"), (white_queens, "Q"), (white_kings, "K"),
-    (black_pawns, "p"), (black_knights , "n"), (black_bishops, "b"),
-    (black_rooks, "r"), (black_queens, "q"), (black_kings, "k"),
-]
-
-def print_board():
-    for rank in range(7, -1, -1):
-        row = ""
-        for file in range(8):
-            square = rank * 8 + file
-            char = "."
-            for bitboard, letter in pieces:
-                if (bitboard >> square) & 1:
-                    char = letter
-                    break
-            row += char + " "
-        print(row)
-        
-print_board()
-
 @dataclass
 class Position:
     white_pawns: int
@@ -59,8 +36,43 @@ class Position:
     halfmove_clock: int
     fullmove_number: int
 
+def print_board(pos):
+    pieces = [
+        (pos.white_pawns, "P"), (pos.white_knights, "N"), (pos.white_bishops, "B"),
+        (pos.white_rooks, "R"), (pos.white_queens, "Q"), (pos.white_kings, "K"),
+        (pos.black_pawns, "p"), (pos.black_knights, "n"), (pos.black_bishops, "b"),
+        (pos.black_rooks, "r"), (pos.black_queens, "q"), (pos.black_kings, "k"),
+    ]
+    for rank in range(7, -1, -1):
+        row = ""
+        for file in range(8):
+            square = rank * 8 + file
+            char = "."
+            for bitboard, letter in pieces:
+                if (bitboard >> square) & 1:
+                    char = letter
+                    break
+            row += char + " "
+        print(row)
 
 
+
+def start_position():
+    return Position(
+        white_pawns=white_pawns, white_knights=white_knights, white_bishops=white_bishops,
+        white_rooks=white_rooks, white_queens=white_queens, white_kings=white_kings,
+        black_pawns=black_pawns, black_knights=black_knights, black_bishops=black_bishops,
+        black_rooks=black_rooks, black_queens=black_queens, black_kings=black_kings,
+        side_to_move=True,
+        white_left_castle=True, white_right_castle=True,
+        black_left_castle=True, black_right_castle=True,
+        en_passant_square=None,
+        halfmove_clock=0,
+        fullmove_number=1,
+    )
+
+
+print_board(start_position())
 
 
 
