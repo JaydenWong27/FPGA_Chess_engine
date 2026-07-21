@@ -36,6 +36,34 @@ class Position:
     halfmove_clock: int
     fullmove_number: int
 
+
+def occupancy(pos):
+    white_occupied = (
+        pos.white_pawns | pos.white_knights | pos.white_bishops |
+        pos.white_rooks | pos.white_queens | pos.white_kings
+    )
+    black_occupied = (
+        pos.black_pawns | pos.black_knights | pos.black_bishops |
+        pos.black_rooks | pos.black_queens | pos.black_kings
+    )
+    all_occupied = white_occupied | black_occupied
+    return white_occupied, black_occupied, all_occupied
+
+def pawn_pushes(pos):
+    moves = []
+    white_occupied, black_occupied, all_occupied = occupancy(pos)
+    if pos.side_to_move:
+        pawns = pos.white_pawns
+        direction = 8
+    else:
+        pawns = pos.black_pawns
+        direction = -8
+    for square in range(64):
+        if (pawns >> square) & 1:
+            target = square + direction
+            if not (all_occupied >> target) & 1:
+                moves.append((square, target,0,0))
+    return moves
 def print_board(pos):
     pieces = [
         (pos.white_pawns, "P"), (pos.white_knights, "N"), (pos.white_bishops, "B"),
@@ -74,6 +102,10 @@ def start_position():
 
 if __name__ == "__main__":
     print_board(start_position())
+    w, b, a = occupancy(start_position())
+    print(hex(w), hex(b), hex(a))
+    print(pawn_pushes(start_position()))
+
 
 
 def parse_fen(fen):
@@ -86,7 +118,13 @@ def parse_fen(fen):
     halfmove_clock = int(fields[4])
     fullmove_number = int(fields[5])
     ranks = fields[0].split("/")
-    print(ranks)
+    ep_field = fields[3]
+    if ep_field == "-":
+        en_passant_square = None
+    else:
+        ep_file = ord(ep_field[0]) - ord("a")
+        ep_rank = int(ep_field[1]) - 1
+        en_passant_square = ep_rank * 8 + ep_file
     wt_pawn = 0
     wt_knight = 0
     wt_bishop = 0
@@ -139,14 +177,9 @@ def parse_fen(fen):
     side_to_move=side_to_move,
     white_kingside_castle=white_kingside_castle, white_queenside_castle=white_queenside_castle,
     black_kingside_castle=black_kingside_castle, black_queenside_castle=black_queenside_castle,
-    en_passant_square=None,
+    en_passant_square=en_passant_square,
     halfmove_clock=halfmove_clock,
     fullmove_number=fullmove_number,
 )
 
     
-
-
-
-
-print(parse_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPPPPPP/RNBQKBNR b KQkq e3 0 1").side_to_move)
