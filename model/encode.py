@@ -45,7 +45,7 @@ def unflatten(n):
     boards.append((n >> (64*i)) & MASK64)
   bb = tuple(boards)
   w = (n >> 512) & 0xFFFF
-  return Position(bb == bb,
+  return Position(bb = bb,
                   stm= w & 1,
                   castle=(w >> 1) & 0xF,
                   ep_sq = (w >> 5) & 0x3F,
