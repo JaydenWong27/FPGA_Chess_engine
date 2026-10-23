@@ -1,4 +1,5 @@
-MATE       = 32000   # top of the mate bandINF        = 32001   # Search window limit
+MATE       = 32000   # top of the mate band
+INF        = 32001   # Search window limit
 DRAW       = 0   # Stalemate 
 MAX_PLY    = 64   # Stack frames 0-63
 MATE_BOUND = MATE - MAX_PLY   # MATE - MAX_PLY , score whose reaches this is a mate 
