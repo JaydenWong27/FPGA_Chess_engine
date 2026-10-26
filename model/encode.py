@@ -101,8 +101,61 @@ def from_fen(fen):
       
   return Position(bb=tuple(boards), stm=stm, castle=castle, ep_sq=ep_sq, ep_valid=ep_valid)
 
-def to_fen(pos)
+def to_fen(pos):
+  ranks = []
+  for rank_index in range(7, -1,-1):
+    text = ""
+    empty = 0
+    for file_index in range(8):
+      letter = piece_at(pos, rank_index * 8 + file_index)
+      if letter is None:
+        empty += 1
+      else:
+        if empty > 0:
+          text = text + str(empty)
+          empty = 0
+        text = text + letter
+    if empty > 0:
+      text = text + str(empty)
+    ranks.append(text)
+  placement = "/".join(ranks)    
+  
+  if(pos.stm == 0):
+     side = "w"
+  else:
+    side = "b"
 
+  castling = ""
+  for letter, bit in CASTLE_BIT.items():
+    if pos.castle & bit:
+      castling = castling + letter
+  if castling == "":
+    castling = "-"
+
+  if pos.ep_valid == 1:
+    ep = "abcdefgh"[pos.ep_sq % 8] + str(pos.ep_sq // 8 + 1)
+  else:
+    ep = "-"
+
+  return " ".join([placement, side, castling, ep,"0", "1"])
+
+
+
+  
+
+def piece_at(pos, square):
+  mask = 1 << square
+  if ((pos.bb[BB_WHITE] | pos.bb[BB_BLACK]) & mask) == 0:
+    return None
+
+  for letter, index in PIECE_BOARD.items():
+    if pos.bb[index] & mask:
+      if(pos.bb[BB_WHITE] & mask):
+        return letter.upper()
+      else:
+        return letter
+        
+      
 
 
 
@@ -119,3 +172,8 @@ if __name__ == "__main__":
   START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
   print(from_fen(START_FEN) == start)
   print(f"{state_word(from_fen('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1')):#06x}")
+  print(to_fen(start) == START_FEN)
+  E4_FEN = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+  print(to_fen(from_fen(E4_FEN)) == E4_FEN)
+  KIWI = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"
+  print(to_fen(from_fen(KIWI)) == KIWI + " 0 1")
