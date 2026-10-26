@@ -1,7 +1,9 @@
 import chess
 
 from dataclasses import dataclass
-from model.constants import (MASK64, BB_PAWNS, BB_KNIGHTS, BB_BISHOPS, BB_ROOKS, BB_QUEENS, BB_KINGS, BB_WHITE, BB_BLACK)
+from model.constants import (MASK64, BB_PAWNS, BB_KNIGHTS, BB_BISHOPS, BB_ROOKS, BB_QUEENS, BB_KINGS, BB_WHITE, BB_BLACK, 
+FLAG_QUIET_MOVE, FLAG_DOUBLE_PAWN_PUSH, FLAG_CASTLE_KING_SIDE, FLAG_CASTLE_QUEEN_SIDE, FLAG_CAPTURE, FLAG_EN_PASSANT_CAPTURE,
+FLAG_PROMOTE_TO_KNIGHT, FLAG_BIT_CAPTURE)
 
 PIECE_BOARD = {"p": BB_PAWNS, "n": BB_KNIGHTS, "b": BB_BISHOPS,
                "r": BB_ROOKS, "q": BB_QUEENS, "k": BB_KINGS}
@@ -141,10 +143,6 @@ def to_fen(pos):
 
   return " ".join([placement, side, castling, ep,"0", "1"])
 
-
-
-  
-
 def piece_at(pos, square):
   mask = 1 << square
   if ((pos.bb[BB_WHITE] | pos.bb[BB_BLACK]) & mask) == 0:
@@ -156,10 +154,75 @@ def piece_at(pos, square):
         return letter.upper()
       else:
         return letter
-        
-      
 
+def from_board(board):
+  FROM_BOARD = (board.pawns, board.knights, board.bishops, board.rooks, board.queens, board.kings, board.occupied_co[chess.WHITE], board.occupied_co[chess.BLACK])
+  
+  if board.turn == chess.WHITE:
+    stm = 0
+  else: 
+    stm = 1
 
+  castle = 0
+  if (board.has_kingside_castling_rights(chess.WHITE)) == True:
+    castle |= 1
+  if (board.has_queenside_castling_rights(chess.WHITE)) == True:
+    castle |= 2
+  if (board.has_kingside_castling_rights(chess.BLACK)) == True:
+    castle |= 4
+  if (board.has_queenside_castling_rights(chess.BLACK)) == True:
+    castle |= 8
+
+  if board.ep_square is None:
+    ep_sq = 0
+    ep_valid = 0
+  else:
+    ep_sq = board.ep_square
+    ep_valid = 1
+
+  return Position ((FROM_BOARD), stm=stm, castle=castle, ep_sq=ep_sq, ep_valid=ep_valid)
+
+def to_board(pos):
+  return chess.Board(to_fen(pos))
+
+def pack_move(from_sq, to_sq, flags):
+  return((from_sq) | (to_sq << 6) | (flags << 12))
+
+def unpack_move(word):
+  from_sq = word & 0x3F
+  to_sq = (word >> 6) & 0x3F
+  flags = (word >> 12) & 0xF
+  return from_sq, to_sq, flags
+  
+def move_from_chess(board, move):
+  if move.promotion is not None:
+    flags = FLAG_PROMOTE_TO_KNIGHT + (move.promotion - 2)
+    if board.is_capture(move):
+      flags |= FLAG_CAPTURE 
+  elif board.is_castling(move):
+    if(board.is_kingside_castling(move)):
+      flags = FLAG_CASTLE_KING_SIDE
+    else:
+      flags = FLAG_CASTLE_QUEEN_SIDE
+  elif board.is_en_passant(move):
+    flags = FLAG_EN_PASSANT_CAPTURE
+  elif board.is_capture(move):
+    flags = FLAG_CAPTURE
+  elif board.piece_type_at(move.from_square) == chess.PAWN and abs(move.to_square - move.from_square) == 16:
+      flags = FLAG_DOUBLE_PAWN_PUSH
+  else:
+    flags = FLAG_QUIET_MOVE
+
+  return pack_move(move.from_square, move.to_square, flags)
+
+def move_to_chess(word):
+  from_sq, to_sq, flags = unpack_move(word)
+  if (flags & 8):
+    promotion = (flags & 3) + 2
+  else:
+    promotion = None
+
+  return chess.Move(from_sq, to_sq, promotion=promotion)
 
 if __name__ == "__main__":
   start = start_position()
