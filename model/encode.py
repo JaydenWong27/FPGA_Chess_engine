@@ -1,3 +1,5 @@
+import chess
+
 from dataclasses import dataclass
 from model.constants import (MASK64, BB_PAWNS, BB_KNIGHTS, BB_BISHOPS, BB_ROOKS, BB_QUEENS, BB_KINGS, BB_WHITE, BB_BLACK)
 
