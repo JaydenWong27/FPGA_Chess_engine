@@ -3,7 +3,7 @@ import chess
 from dataclasses import dataclass
 from model.constants import (MASK64, BB_PAWNS, BB_KNIGHTS, BB_BISHOPS, BB_ROOKS, BB_QUEENS, BB_KINGS, BB_WHITE, BB_BLACK, 
 FLAG_QUIET_MOVE, FLAG_DOUBLE_PAWN_PUSH, FLAG_CASTLE_KING_SIDE, FLAG_CASTLE_QUEEN_SIDE, FLAG_CAPTURE, FLAG_EN_PASSANT_CAPTURE,
-FLAG_PROMOTE_TO_KNIGHT, FLAG_BIT_CAPTURE)
+FLAG_PROMOTE_TO_KNIGHT, FLAG_BIT_CAPTURE, RANK_1, RANK_8)
 
 PIECE_BOARD = {"p": BB_PAWNS, "n": BB_KNIGHTS, "b": BB_BISHOPS,
                "r": BB_ROOKS, "q": BB_QUEENS, "k": BB_KINGS}
@@ -224,6 +224,56 @@ def move_to_chess(word):
 
   return chess.Move(from_sq, to_sq, promotion=promotion)
 
+def check_invariants(pos):
+  pawns = pos.bb[BB_PAWNS]
+  kings = pos.bb[BB_KINGS]
+  white = pos.bb[BB_WHITE]
+  black = pos.bb[BB_BLACK]
+
+  seen = 0
+  for board in pos.bb[:6]:
+    if seen & board:
+      raise ValueError("rule 1: two piece boards share a square")
+    seen |= board
+  if white & black:
+    raise ValueError("rule 1: a square is both white and black")
+
+  if seen != (white | black):
+    raise ValueError("rule 2: piece boards don't match WHITE | BLACK")
+
+  if bin(kings & white).count("1") != 1:
+    raise ValueError("rule 3: white doesn't have exactly one king")
+  if bin(kings & black).count("1") != 1:
+    raise ValueError("rule 3: black doesn't have exactly one king")
+
+  if pawns & (RANK_1 | RANK_8):
+    raise ValueError("rule 4: a pawn is on rank 1 or 8")
+
+  if pos.ep_valid == 1:
+    if pos.stm == 0:
+      expected_rank = 5
+    else:
+      expected_rank = 2
+    if pos.ep_sq // 8 != expected_rank:
+      raise ValueError("rule 5: en passant square is on the wrong rank")
+  else:
+    if pos.ep_sq != 0:
+      raise ValueError("rule 5: ep_sq is set but ep_valid is 0")
+
+def print_board(pos):
+  for rank_index in range(7, -1, -1):
+    row = str(rank_index + 1) + "  "
+    for file_index in range(8):
+      letter = piece_at(pos, rank_index * 8 + file_index)
+      if letter is None:
+        row = row + ". "
+      else:
+        row = row + letter + " "
+    print(row)
+  print("   a b c d e f g h")
+  # side to move, castling and en passant, the same three fields as in a FEN
+  print("   " + " ".join(to_fen(pos).split()[1:4]))
+
 if __name__ == "__main__":
   start = start_position()
   for board in start.bb:
@@ -242,3 +292,4 @@ if __name__ == "__main__":
   print(to_fen(from_fen(E4_FEN)) == E4_FEN)
   KIWI = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -"
   print(to_fen(from_fen(KIWI)) == KIWI + " 0 1")
+  print_board(start)
