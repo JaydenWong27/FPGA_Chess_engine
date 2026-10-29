@@ -25,3 +25,10 @@ impl/
 .DS_Store
 *.swp
 .vscode/
+
+# Generated test vectors
+vectors/
+
+#Claude Code local settings
+.claude/
+
