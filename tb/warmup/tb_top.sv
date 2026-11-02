@@ -143,8 +143,8 @@ class castle_scoreboard extends uvm_subscriber #(castle_item);
     `uvm_component_utils(castle_scoreboard)
 
     logic [3:0] golden_table [65535:0];
-    int unsigned [16:0] entries;
-    int unsigned [16:0] mismatches;
+    int unsigned entries;
+    int unsigned mismatches;
     string path = "../../vectors/castle_update.txt";
 
     function new(string name, uvm_component parent);
@@ -154,19 +154,27 @@ class castle_scoreboard extends uvm_subscriber #(castle_item);
     function void build_phase(uvm_phase phase);
     int fd;
     string line;
-    logic [3:0] a, d;
-    logic [5:0] b, c;
+    logic [3:0] c_in, c_out;
+    logic [5:0] f, t;
 
         super.build_phase(phase);
 
-        fd = $fopen(path, "r")
+        fd = $fopen(path, "r");
         if (fd == 0) `uvm_fatal("Not Available", "run gen_vectors.py first")
         while ($fgets(line, fd) != 0) begin
-            if(line[0] == "#") begin
-            end else begin
-                $sscanf(line, "%h %h %h %h", a, b, c, d)
+            if(line[0] == "#") continue;
+            begin
+                n = $sscanf(line, "%h %h %h %h", c_in, f, t, c_out);
+                if (n == 4) begin
+                    golden_table[{c_in, f, t}] = c_out;
+                    entires++;
 
+                end
             end
+        end
+        $fclose(fd);
+        if (entries != 65536) begin
+            `uvm_fatal("")
         end
 
     endfunction
