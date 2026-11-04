@@ -16,7 +16,7 @@ package slider_tb_pkg;
             endfunction
 
             function string convert2string();
-                return $sformatf("sq=%0d occ=%0d rook_att=%0d bishop_att=%0d",sq, occ, rook_att, bishop_att);
+                return $sformatf("sq=%h occ=%h rook_att=%h bishop_att=%h",sq, occ, rook_att, bishop_att);
             endfunction  
 
     endclass
@@ -211,12 +211,45 @@ package slider_tb_pkg;
         endfunction
     endclass
 
+    class slider_coverage extends uvm_subscriber #(slider_item);
+        `uvm_component_utils(slider_coverage)
+
+        slider_item item;
+
+        covergroup cg;
+            cp_sq : coverpoint item.sq;
+
+            cp_occ : coverpoint item.occ {
+                bins empty = {64'h0};
+                bins full = {64'hFFFF_FFFF_FFFF_FFFF};
+                bins other = {[64'h0000_0000_0000_0001: 64'hFFFF_FFFF_FFFF_FFFE]};
+            }
+
+            x_sq_occ : cross cp_sq, cp_occ;
+        endgroup
+
+        function new(string name, uvm_component parent);
+            super.new(name, parent);
+            cg = new();
+        endfunction
+
+        function void write(slider_item t);
+            item = t;
+            cg.sample();
+        endfunction
+
+        function void report_phase(uvm_phase phase);
+            `uvm_info("COV", $sformatf("coverage = %0.2f%%", cg.get_coverage()), UVM_NONE)
+        endfunction
+
+    endclass
+
     class slider_env extends uvm_env;
         `uvm_component_utils(slider_env)
 
           slider_agent agt;
         slider_scoreboard sb;
- //       slider_coverage cov;
+        slider_coverage cov;
 
         function new(string name, uvm_component parent);
             super.new(name, parent);
@@ -227,15 +260,50 @@ package slider_tb_pkg;
 
               agt = slider_agent::type_id::create("agt",this);
             sb = slider_scoreboard::type_id::create("sb", this);
-//            cov = slider_coverage::type_id::create("cov", this);
+            cov = slider_coverage::type_id::create("cov", this);
 
         endfunction
 
         function void connect_phase(uvm_phase phase);
             agt.mtr.ap.connect(sb.analysis_export);
- //           agt.mtr.ap.connect(cov.analysis_export);
+            agt.mtr.ap.connect(cov.analysis_export);
 
         endfunction
+    endclass
+
+    class slider_file_seq extends uvm_sequence #(slider_item);
+        `uvm_object_utils(slider_file_seq)
+
+        string fname;
+
+        function new(string name = "slider_file_seq");
+            super.new(name);
+        endfunction
+
+        task body();
+            int fd;
+            string line;
+            int n;
+            logic [5:0] sq;
+            logic [63:0] occ,rook, bishop;
+
+            fd = $fopen(fname, "r");
+
+            if (fd == 0) `uvm_fatal("VECTORS", $sformatf("can't open %s", fname))
+
+            while ($fgets(line, fd) != 0) begin
+                if (line[0] == "#") continue;
+                n = $sscanf(line, "%h %h %h %h", sq, occ, rook, bishop);
+                if (n == 4) begin
+                    req = slider_item::type_id::create("req");
+                    start_item(req);
+                    req.sq = sq;
+                    req.occ = occ;
+                    finish_item(req);
+                end
+            end
+            $fclose(fd);
+        endtask
     endclass
 
     class slider_test extends uvm_test ;
@@ -255,14 +323,17 @@ package slider_tb_pkg;
         endfunction 
 
         task run_phase(uvm_phase phase);
-//            slider_seq item;
+            slider_file_seq seq;
+            string files[4] = '{"empty.txt", "full.txt", "single.txt", "random.txt"};
+
+            seq = slider_file_seq::type_id::create("seq");
             phase.raise_objection(this);
-
             phase.phase_done.set_drain_time(this, 20);
-            
-//            item = slider_seq::type_id::create("seq");
 
-//            item.start(env.agt.sqr);
+            foreach (files[i]) begin
+                seq.fname = {"../../vectors/attacks/", files[i]};
+                seq.start(env.agt.sqr);
+            end
 
             phase.drop_objection(this);
         endtask
