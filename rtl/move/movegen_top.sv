@@ -39,9 +39,13 @@ import chess_pkg::*;
     square_t king_sq;
     logic attacked;
 
+    logic d_attacked, e_attacked, f_attacked;
     logic is_pawn_move, is_capture, is_promotion, is_double_push, is_en_passant;
-
     logic [1:0] promo_cnt;
+    logic ok_king_side, ok_queen_side;
+    logic is_castle_ks, is_castle_qs;
+
+    square_t base;
 
     function automatic [5:0] lsb(input logic [63:0] x);
         logic [5:0] position_last_one;
@@ -119,7 +123,9 @@ import chess_pkg::*;
     assign is_capture = them_bb[to]; 
     assign is_promotion = is_pawn_move & (to[5:3] == 3'd7 || to[5:3] == 3'd0); // [5:3] is rank and [2:0] is file
     assign is_double_push = is_pawn_move & (to[5:3] == (from[5:3] + 3'b010) || (from[5:3]) == (to[5:3] + 3'b010));
-    assign is_en_passant = is_pawn_move && pos.state.ep_valid && to == pos.state.ep_sq ; 
+    assign is_en_passant = is_pawn_move && pos.state.ep_valid && to == pos.state.ep_sq ;
+    assign is_castle_ks = (ptype == BB_KINGS) && (to == from + 2); // king jumps 2 files right
+    assign is_castle_qs = (ptype == BB_KINGS) && (from == to + 2); // king jumps 2 files left
 
     slider_hq u_slider (
         .sq(from),
@@ -153,7 +159,7 @@ import chess_pkg::*;
             BB_BISHOPS: targets = bishop_att;
             BB_ROOKS: targets = rook_att;
             BB_QUEENS: targets = bishop_att | rook_att;
-            BB_KINGS: targets = king_att;
+            BB_KINGS: targets = king_att | (ok_king_side ? 64'd1 << (base + 6) : 64'd0) | (ok_queen_side ? 64'd1 << (base + 2) : 64'd0);
             default: targets = '0;
         endcase
         targets = targets & ~us_bb;
@@ -171,6 +177,10 @@ import chess_pkg::*;
             cand.flags = FLAG_EN_PASSANT_CAPTURE;
         end else if (is_double_push) begin
             cand.flags = FLAG_DOUBLE_PAWN_PUSH;
+        end else if (is_castle_ks) begin
+            cand.flags = FLAG_CASTLE_KING_SIDE;
+        end else if (is_castle_qs) begin
+            cand.flags = FLAG_CASTLE_QUEEN_SIDE;
         end else if (is_capture) begin
             cand.flags = FLAG_CAPTURE;
         end else begin
@@ -188,9 +198,38 @@ import chess_pkg::*;
     legality u_legal (
         .pos(after), 
         .sq(king_sq), 
-        .by(!pos.state.stm), 
+        .by(!pos.state.stm),
         .attacked(attacked)
         );
+
+    assign base = pos.state.stm ? 6'd56 : 6'd0;
+
+    legality u_chk_d (
+        .pos(pos),
+        .sq(base + 3),
+        .by(!pos.state.stm),
+
+        .attacked(d_attacked)
+    );
+
+    legality u_chk_e (
+        .pos(pos),
+        .sq(base + 4),
+        .by(!pos.state.stm),
+
+        .attacked(e_attacked)
+    );
+
+    legality u_chk_f (
+        .pos(pos),
+        .sq(base + 5),
+        .by(!pos.state.stm),
+
+        .attacked(f_attacked)
+    );
+
+    assign ok_king_side = (pos.state.stm ? pos.state.castle[2] : pos.state.castle[0]) && !occ[base + 5] && !occ[base + 6] && (!e_attacked && !f_attacked);
+    assign ok_queen_side = (pos.state.stm ? pos.state.castle[3] : pos.state.castle[1]) && !occ[base + 1] && !occ[base + 2] && !occ[base + 3] && (!e_attacked && !d_attacked);
 
     assign move = cand;
     assign move_valid = (state == EMIT) && (to_set != '0) && !attacked;
