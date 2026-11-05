@@ -39,6 +39,10 @@ import chess_pkg::*;
     square_t king_sq;
     logic attacked;
 
+    logic is_pawn_move, is_capture, is_promotion, is_double_push, is_en_passant;
+
+    logic [1:0] promo_cnt;
+
     function automatic [5:0] lsb(input logic [63:0] x);
         logic [5:0] position_last_one;
         position_last_one = '0;
@@ -80,6 +84,7 @@ import chess_pkg::*;
                     end
                 end
                 LOAD_TO: begin
+                    promo_cnt <= '0;
                     to_set <= targets;
                     state <= EMIT;
                 end
@@ -87,7 +92,12 @@ import chess_pkg::*;
                     if (to_set == 0) begin
                         state <= LOAD_FROM;
                     end else begin
-                        to_set <= to_set & (to_set - 1);
+                        if(is_promotion && promo_cnt != 3) begin
+                            promo_cnt <= promo_cnt + 1;
+                        end else begin
+                            promo_cnt <= '0;
+                            to_set <= to_set & (to_set - 1);
+                        end
                     end
                 end
                 DONE: begin
@@ -104,6 +114,12 @@ import chess_pkg::*;
     assign them_bb = pos.bb[BB_WHITE + !pos.state.stm]; // stm = 1 black 7  = swaps them
 
     assign occ = us_bb | them_bb; // is occupancy
+
+    assign is_pawn_move = (ptype == BB_PAWNS);
+    assign is_capture = them_bb[to]; 
+    assign is_promotion = is_pawn_move & (to[5:3] == 3'd7 || to[5:3] == 3'd0); // [5:3] is rank and [2:0] is file
+    assign is_double_push = is_pawn_move & (to[5:3] == (from[5:3] + 3'b010) || (from[5:3]) == (to[5:3] + 3'b010));
+    assign is_en_passant = is_pawn_move && pos.state.ep_valid && to == pos.state.ep_sq ; 
 
     slider_hq u_slider (
         .sq(from),
@@ -145,9 +161,22 @@ import chess_pkg::*;
 
     assign to = lsb(to_set);
 
-    assign cand.from_sq = from;
-    assign cand.to_sq = to;
-    assign cand.flags = them_bb[to] ? FLAG_CAPTURE : FLAG_QUIET_MOVE;
+
+    always_comb begin
+        cand.from_sq = from;
+        cand.to_sq = to;
+        if (is_promotion) begin
+            cand.flags = {1'b1, is_capture, ~promo_cnt};
+        end else if (is_en_passant) begin
+            cand.flags = FLAG_EN_PASSANT_CAPTURE;
+        end else if (is_double_push) begin
+            cand.flags = FLAG_DOUBLE_PAWN_PUSH;
+        end else if (is_capture) begin
+            cand.flags = FLAG_CAPTURE;
+        end else begin
+            cand.flags = FLAG_QUIET_MOVE;
+        end
+    end
 
     make_move u_make (
         .pos(pos),
