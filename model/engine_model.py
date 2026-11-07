@@ -84,13 +84,28 @@ def squares(bb):
 
 
 def evaluate(pos):
+    total = material(pos) + pst_score(pos)
+    return -total if pos.stm else total 
+
+
+def material(pos):
+    total = 0
+    for t in range(1, 7): 
+        board = pos.bb[t-1]
+        total += VALUE[t] * (board & pos.bb[BB_WHITE]).bit_count()
+        total -= VALUE[t] * (board & pos.bb[BB_BLACK]).bit_count()
+    return total 
+
+
+def pst_score(pos):
     total = 0
     for t in range(1, 7):
         board = pos.bb[t - 1]
         for sq in squares(board & pos.bb[BB_WHITE]):
-            total += VALUE[t] + PST[t-1][sq]
+            total += PST[t - 1][sq]
         for sq in squares(board & pos.bb[BB_BLACK]):
-            total -= VALUE[t] + PST[t-1][sq ^ 56]
-    return -total if pos.stm else total 
+            total -= PST[t - 1][sq ^ 56]
+    return total
+
 
 # depending on which side so we represent total in negative for black and positive in total for white 
