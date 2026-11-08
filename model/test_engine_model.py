@@ -4,21 +4,9 @@ from pathlib import Path
 from model.encode import from_board
 from model.engine_model import PST, evaluate
 from model.constants import MATE_BOUND
+from model.reference import random_boards
 
 ROOT = Path(__file__).resolve().parent.parent
-
-def random_boards(n, seed=3):
-    rng = random.Random(seed)
-    boards = []
-    for _ in range (n):
-        board = chess.Board()
-        for _ in range(rng.randint(1, 120)):
-            moves = list(board.legal_moves)
-            if not moves:
-                break
-            board.push(rng.choice(moves))
-        boards.append(board)
-    return boards
 
 # catch missing flip, unflipped would be 5, 25 and -40
 def test_pst_flip():

@@ -9,6 +9,10 @@ sys.path.insert(0, str(ROOT))
 import os
 
 from model.constants import CASTLE_KEEP, MASK64
+from model.encode import from_board, flatten
+from model.engine_model import material, pst_score , evaluate
+from model.reference import random_boards
+from model.perft import POSITIONS
 
 folder = ROOT / "vectors"
 file_path =  folder / "castle_update.txt"
@@ -51,7 +55,44 @@ def gen_attacks():
     random.seed(1)
     write_attacks("random.txt", [(sq, random.getrandbits(64)) for sq in range(64) for _ in range(200)])
 
+def gen_eval():
+    os.makedirs(folder / "eval", exist_ok=True)                
+    with open(folder / "eval" / "eval.txt", "w") as f:
+        f.write("# position material pst score\n")        
+        for board in eval_boards():
+            pos = from_board(board)                                 
+            f.write(f"{flatten(pos):0132x} {h16(material(pos))} {h16(pst_score(pos))} {h16(evaluate(pos))}\n")
+     
+def h16(x):
+    return f"{x & 0xFFFF:04x}" #16-bit two's complement and a 4 hex digit
+
+def eval_boards():
+    boards = [chess.Board(fen) for _, fen, _ in POSITIONS]
+    boards += random_boards(1000, seed=11)
+    boards += [
+        chess.Board("4k3/8/8/8/8/8/8/4K3 w - - 0 1"),
+        chess.Board("4k3/8/8/8/8/8/8/QQQ1K3 w - - 0 1"),
+        chess.Board("qqq1k3/8/8/8/8/8/8/4K3 w - - 0 1"),
+    ]
+    flipped = []
+    for board in boards:
+        other = board.copy()
+        other.turn = not other.turn
+        other.ep_square = None
+        flipped.append(other)
+    return boards + flipped
+
+def gen_eval():
+    os.makedirs(folder / "eval", exist_ok=True)
+    with open(folder / "eval" / "eval.txt", "w") as f:
+                f.write("# position material pst score\n")
+                for board in eval_boards():
+                    pos = from_board(board)
+                    f.write(f"{flatten(pos):0132x} {h16(material(pos))} {h16(pst_score(pos))} {h16(evaluate(pos))}\n")
+
 if __name__ == "__main__":
     gen_castle()
     gen_attacks()
+    gen_eval()
+
 
