@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT))
 import os
 
 from model.constants import CASTLE_KEEP, MASK64
-from model.encode import from_board, flatten
+from model.encode import from_board, flatten, move_from_chess
 from model.engine_model import material, pst_score , evaluate
 from model.reference import random_boards
 from model.perft import POSITIONS
@@ -82,17 +82,30 @@ def eval_boards():
         flipped.append(other)
     return boards + flipped
 
-def gen_eval():
-    os.makedirs(folder / "eval", exist_ok=True)
-    with open(folder / "eval" / "eval.txt", "w") as f:
-                f.write("# position material pst score\n")
-                for board in eval_boards():
-                    pos = from_board(board)
-                    f.write(f"{flatten(pos):0132x} {h16(material(pos))} {h16(pst_score(pos))} {h16(evaluate(pos))}\n")
+def movegen_boards():
+    boards = [chess.Board(fen) for _, fen, _ in POSITIONS]
+    boards += random_boards(500, seed=15)
+    boards += [
+        chess.Board("8/8/8/K2pP2r/8/8/8/7k w - d6 0 1")
+    ]
+    return boards
+
+def gen_movegen():
+    os.makedirs( folder / "movegen" , exist_ok=True)
+    with open(folder / "movegen" / "positions.txt", "w") as f:
+        f.write("# position count moves\n")
+        for board in movegen_boards():
+            pos = from_board(board)
+            moves = sorted(move_from_chess(board, m) for m in board.legal_moves)
+            f.write(f"{flatten(pos):0132x} {len(moves):02x} {' '.join(f'{m:04x}' for m in moves )}\n")
+
+            
+
 
 if __name__ == "__main__":
     gen_castle()
     gen_attacks()
     gen_eval()
+    gen_movegen()
 
 
