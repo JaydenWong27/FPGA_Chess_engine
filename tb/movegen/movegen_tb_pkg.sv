@@ -287,13 +287,12 @@ package movegen_tb_pkg;
                 bins capture_promotion_queen = {FLAG_CAPTURE_PROMOTE_QUEEN};
             }
 
-            cp_occ : coverpoint item.occ {
-                bins empty = {64'h0};
-                bins full = {64'hFFFF_FFFF_FFFF_FFFF};
-                bins other = {[64'h0000_0000_0000_0001: 64'hFFFF_FFFF_FFFF_FFFE]};
+            cp_castle : coverpoint m {
+                bins w_ks = {16'h2184};
+                bins w_qs = {16'h3084};
+                bins b_ks = {16'h2fbc};
+                bins b_qs = {16'h3ebc};
             }
-
-            x_sq_occ : cross cp_sq, cp_occ;
         endgroup
 
         function new(string name, uvm_component parent);
@@ -302,8 +301,11 @@ package movegen_tb_pkg;
         endfunction
 
         function void write(movegen_item t);
-            item = t;
-            cg.sample();
+
+            for(int i = 0; i < t.moves.size(); i++) begin
+                m = t.moves[i];
+                cg.sample();
+            end
         endfunction
 
         function void report_phase(uvm_phase phase);
@@ -352,8 +354,7 @@ package movegen_tb_pkg;
             int fd;
             string line;
             int n;
-            logic [5:0] sq;
-            logic [63:0] occ,rook, bishop;
+            logic [527:0] pos;
 
             fd = $fopen(fname, "r");
 
@@ -361,12 +362,11 @@ package movegen_tb_pkg;
 
             while ($fgets(line, fd) != 0) begin
                 if (line[0] == "#") continue;
-                n = $sscanf(line, "%h %h %h %h", sq, occ, rook, bishop);
-                if (n == 4) begin
+                n = $sscanf(line, "%h", pos);
+                if (n == 1) begin
                     req = movegen_item::type_id::create("req");
                     start_item(req);
-                    req.sq = sq;
-                    req.occ = occ;
+                    req.pos = pos;
                     finish_item(req);
                 end
             end
@@ -392,16 +392,13 @@ package movegen_tb_pkg;
 
         task run_phase(uvm_phase phase);
             movegen_file_seq seq;
-            string files[4] = '{"empty.txt", "full.txt", "single.txt", "random.txt"};
 
             seq = movegen_file_seq::type_id::create("seq");
             phase.raise_objection(this);
             phase.phase_done.set_drain_time(this, 20);
 
-            foreach (files[i]) begin
-                seq.fname = {"../../vectors/attacks/", files[i]};
-                seq.start(env.agt.sqr);
-            end
+            seq.fname = "../../vectors/movegen/positions.txt";
+            seq.start(env.agt.sqr);
 
             phase.drop_objection(this);
         endtask
