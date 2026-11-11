@@ -13,6 +13,7 @@ from model.encode import from_board, flatten, move_from_chess
 from model.engine_model import material, pst_score , evaluate
 from model.reference import random_boards
 from model.perft import POSITIONS
+from model.search import search
 
 folder = ROOT / "vectors"
 file_path =  folder / "castle_update.txt"
@@ -99,7 +100,30 @@ def gen_movegen():
             moves = sorted(move_from_chess(board, m) for m in board.legal_moves)
             f.write(f"{flatten(pos):0132x} {len(moves):02x} {' '.join(f'{m:04x}' for m in moves )}\n")
 
-            
+def search_boards():
+    search_boards = [chess.Board(fen) for _, fen, _ in POSITIONS]
+    search_boards += random_boards(50, seed=17)
+    search_boards += [
+        chess.Board("6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1"),
+        chess.Board("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1"),
+        chess.Board("4k3/8/8/3q4/4P3/8/8/4K3 w - - 0 1")
+    ]
+    return search_boards
+
+
+def gen_search():
+    os.makedirs( folder / "search" , exist_ok=True)
+    with open(folder / "search" / "search.txt" , "w") as f:
+        f.write("# position depth move score\n")
+        for board in search_boards():
+            pos = from_board(board)
+            for depth in range(1,4):
+                score, move = search(board, depth)
+                if move is None:
+                    m = 0
+                else: 
+                    m = move_from_chess(board, move)
+                f.write(f"{flatten(pos):0132x} {depth:02x} {m:04x} {h16(score)}\n")
 
 
 if __name__ == "__main__":
@@ -107,5 +131,6 @@ if __name__ == "__main__":
     gen_attacks()
     gen_eval()
     gen_movegen()
+    gen_search()
 
 
