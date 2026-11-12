@@ -123,4 +123,17 @@ package chess_pkg;
     square_t     from_sq; //bits 5:0
   } move_t;
   
+  typedef struct packed {
+    position_t pos;
+    score_t alpha;
+    score_t beta;
+    score_t best;
+    move_t best_move;
+    move_t move;
+    logic [7:0] count;
+    logic [7:0] idx; 
+  } frame_t;
+
+
 endpackage
+
