@@ -106,7 +106,8 @@ def search_boards():
     search_boards += [
         chess.Board("6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1"),
         chess.Board("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1"),
-        chess.Board("4k3/8/8/3q4/4P3/8/8/4K3 w - - 0 1")
+        chess.Board("4k3/8/8/3q4/4P3/8/8/4K3 w - - 0 1"),
+        chess.Board("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3")  # fool's mate, white is checkmated
     ]
     return search_boards
 
