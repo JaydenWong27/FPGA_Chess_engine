@@ -21,6 +21,14 @@ impl/
 *.rpt
 *.rpt.html
 
+# Vivado build and sim output
+build/
+.Xil/
+*.jou
+xsim.dir/
+clockInfo.txt
+dfx_runtime.txt
+
 # OS / editor
 .DS_Store
 *.swp

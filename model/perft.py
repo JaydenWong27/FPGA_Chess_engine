@@ -10,19 +10,22 @@ POSITIONS = [
     ("pos5", "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", [44, 1486, 62379]),
 ]
 
-failures = 0
-for name, fen, counts in POSITIONS:
-    for depth, expected in enumerate(counts, start=1):
-        value = perft(chess.Board(fen), depth)
-        if value == expected:
-            status = "OK"
-        else:
-            failures += 1
-            status = f"FAIL (expected {expected})"
-        print(f"{name:<10} depth {depth}  {value:>6}  {status}")
+if __name__ == "__main__":
 
-if failures > 0:
-    print(f"{failures} failed")
-    sys.exit(1)
-else:
-    print("all passed")
+    failures = 0
+
+    for name, fen, counts in POSITIONS:
+        for depth, expected in enumerate(counts, start=1):
+            value = perft(chess.Board(fen), depth)
+            if value == expected:
+                status = "OK"
+            else:
+                failures += 1
+                status = f"FAIL (expected {expected})"
+            print(f"{name:<10} depth {depth}  {value:>6}  {status}")
+
+    if failures > 0:
+        print(f"{failures} failed")
+        sys.exit(1)
+    else:
+        print("all passed")
