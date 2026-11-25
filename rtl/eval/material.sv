@@ -1,3 +1,5 @@
+// Constant multiplies in LUTs: a DSP48 added ~3.4 ns to this path and left only ~0.1 ns slack at 50 MHz
+(* use_dsp = "no" *)
 module material
  import chess_pkg::*;
  (

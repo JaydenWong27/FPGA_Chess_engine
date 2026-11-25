@@ -37,7 +37,9 @@ import chess_pkg::*;
     move_t cand;
     position_t after;
     square_t king_sq;
+    square_t our_king; // our king's square before the move
     logic attacked;
+    logic legal_now; // this clock's candidate is legal (combinational)
 
     logic d_attacked, e_attacked, f_attacked;
     logic is_pawn_move, is_capture, is_promotion, is_double_push, is_en_passant;
@@ -194,7 +196,10 @@ import chess_pkg::*;
         .new_pos(after)
     );
 
-    assign king_sq = lsb(after.bb[BB_KINGS] & after.bb[BB_WHITE + pos.state.stm]);
+    // Only a king move changes where our king is, so the square comes from pos instead of
+    // scanning after.bb; that keeps a 64-bit priority encoder off the legality path.
+    assign our_king = lsb(pos.bb[BB_KINGS] & us_bb);
+    assign king_sq = (ptype == BB_KINGS) ? to : our_king;
     legality u_legal (
         .pos(after), 
         .sq(king_sq), 
@@ -206,7 +211,7 @@ import chess_pkg::*;
 
     legality u_chk_d (
         .pos(pos),
-        .sq(base + 3),
+        .sq(base + 6'd3),
         .by(!pos.state.stm),
 
         .attacked(d_attacked)
@@ -214,7 +219,7 @@ import chess_pkg::*;
 
     legality u_chk_e (
         .pos(pos),
-        .sq(base + 4),
+        .sq(base + 6'd4),
         .by(!pos.state.stm),
 
         .attacked(e_attacked)
@@ -222,7 +227,7 @@ import chess_pkg::*;
 
     legality u_chk_f (
         .pos(pos),
-        .sq(base + 5),
+        .sq(base + 6'd5),
         .by(!pos.state.stm),
 
         .attacked(f_attacked)
@@ -231,8 +236,19 @@ import chess_pkg::*;
     assign ok_king_side = (pos.state.stm ? pos.state.castle[2] : pos.state.castle[0]) && !occ[base + 5] && !occ[base + 6] && (!e_attacked && !f_attacked);
     assign ok_queen_side = (pos.state.stm ? pos.state.castle[3] : pos.state.castle[1]) && !occ[base + 1] && !occ[base + 2] && !occ[base + 3] && (!e_attacked && !d_attacked);
 
-    assign move = cand;
-    assign move_valid = (state == EMIT) && (to_set != '0) && !attacked;
+    // Registered outputs: the legality check ends at a flop here, and the search FSM / move-list
+    // BRAM see the move one clock later. done is at least two clocks after the last EMIT,
+    // so the last move always reaches the FSM before done.
+    assign legal_now = (state == EMIT) && (to_set != '0) && !attacked;
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            move_valid <= 1'b0;
+        end else begin
+            move_valid <= legal_now;
+        end
+        move <= cand;
+    end
     assign done = (state == DONE); 
 
 

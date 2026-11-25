@@ -14,13 +14,21 @@ module eval_top
 );
 
     position_t copy;      // snapshot of pos taken on start; material reads this
+    score_t    mat_comb;  // material straight out of the adder tree, not registered yet
     logic      pst_done;  // pst finished; score is registered on the next edge
     int        total;     // material + pst, negated when black is to move
 
     material u_material (
         .pos       (copy),
-        .materials (mat_score)
+        .materials (mat_comb)
     );
+
+    // Register material so popcount -> multiply -> sum gets a clock of its own instead of
+    // sharing one with the final add and negate. copy is loaded on start and pst_done
+    // comes at least two clocks later, so mat_score is always settled by the time it is used.
+    always_ff @(posedge clk) begin
+        mat_score <= mat_comb;
+    end
 
     // pst takes its own snapshot of pos on start, so it gets the live input
     pst #(
