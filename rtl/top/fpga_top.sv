@@ -75,6 +75,24 @@ search_top #(
     .best_score(best_score)
 );
 
-assign led = '0;
+// LEDs on the A7-Lite light when the pin is low.
+// led[0]: heartbeat (~1.5 Hz), shows the bitstream is loaded and the clock runs.
+// led[1]: on while a search is running.
+logic [24:0] beat = '0;
+logic        busy;
+
+always_ff @(posedge clk) begin
+    beat <= beat + 1;
+    if (!rst_n) begin
+        busy <= 1'b0;
+    end else if (start) begin
+        busy <= 1'b1;
+    end else if (done) begin
+        busy <= 1'b0;
+    end
+end
+
+assign led[0] = ~beat[24];
+assign led[1] = ~busy;
 
 endmodule
