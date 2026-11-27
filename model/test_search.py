@@ -41,3 +41,13 @@ def test_captures_first_keeps_score():
             ab_score, _ = search(board, depth)
             nm_score, _ = negamax(board, depth, 0)
             assert ab_score == nm_score
+
+def test_qsearch_sees_recapture():
+    board = chess.Board("4k3/8/4p3/3p4/8/8/8/3QK3 w - - 0 1")
+    score, move = search(board, 1)
+    assert move != chess.Move.from_uci("d1d5")
+
+def test_nodes_depth0_quiet():
+    stats = Stats()
+    search(chess.Board(), 0, stats)
+    assert stats.nodes == 1

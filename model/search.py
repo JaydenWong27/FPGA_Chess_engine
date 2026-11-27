@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT))
 
 import os
 
-from model.constants import MATE, INF, DRAW
+from model.constants import MATE, INF, DRAW, MAX_PLY
 from model.encode import from_board
 from model.engine_model import evaluate
 
@@ -35,9 +35,37 @@ def order_moves(board):
     return sorted(board.legal_moves,
                   key=lambda m: (0 if is_tactical(board, m) else 1, hw_key(board , m)))
 
+def qsearch(board, alpha, beta, ply, stats=None):
+    if stats is not None:
+        stats.nodes += 1
+
+    stand = evaluate(from_board(board))
+    if stand >= beta or ply == MAX_PLY - 1:
+        return stand
+
+    best = stand
+    if stand > alpha:
+        alpha = stand
+
+    for m in order_moves(board):
+        if not is_tactical(board, m):
+            continue
+        board.push(m)
+        score = -qsearch(board, -beta, -alpha, ply + 1, stats)
+        board.pop()
+
+        if score > best:
+            best = score
+        if score > alpha:
+            alpha = score
+        if alpha >= beta:
+            break
+
+    return best
+
 def negamax(board, depth, ply):
-    if (depth == 0):
-        return evaluate(from_board(board)), None
+    if depth == 0:
+        return qsearch(board, -INF, INF, ply), None
 
     moves = order_moves(board)
 
@@ -61,11 +89,11 @@ def negamax(board, depth, ply):
     return best, best_move
 
 def alphabeta(board, depth, ply, alpha, beta, stats=None):
+    if depth == 0:
+        return qsearch(board, alpha, beta, ply, stats), None
+
     if stats is not None:
         stats.nodes += 1
-
-    if (depth == 0):
-        return evaluate(from_board(board)), None
 
     moves = order_moves(board)
 
