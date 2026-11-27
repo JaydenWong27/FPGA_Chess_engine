@@ -30,10 +30,12 @@ for i, board in enumerate(boards):
         hw_move, hw_score = hw.search(pos, depth)
         ms = (time.perf_counter() - t0) * 1000
         md_move, md_score = model.search(pos, depth)
-        ok = (hw_move, hw_score) == (md_move, md_score)
+        ok = (hw_move, hw_score, hw.last_nodes) == (md_move, md_score, model.last_nodes)
         bad += not ok
-        print(f"pos {i:2d} depth {depth}: fpga {hw_move:04x} {hw_score:6d}  model {md_move:04x} {md_score:6d}"
-              f"  {ms:8.1f} ms  {'ok' if ok else 'MISMATCH'}", flush=True)
+        cpn = hw.last_cycles / max(hw.last_nodes, 1)
+        print(f"pos {i:2d} depth {depth}: fpga {hw_move:04x} {hw_score:6d} n={hw.last_nodes:7d}"
+              f"  model {md_move:04x} {md_score:6d} n={model.last_nodes:7d}"
+              f"  {cpn:6.1f} cyc/node  {ms:8.1f} ms  {'ok' if ok else 'MISMATCH'}", flush=True)
 hw.close()
 print(f"\n{len(boards) * max_depth - bad} / {len(boards) * max_depth} match")
 sys.exit(1 if bad else 0)
