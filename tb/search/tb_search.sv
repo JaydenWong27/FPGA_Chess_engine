@@ -21,7 +21,9 @@ module tb_search;
         .depth(eif.depth),
         .done(eif.done),
         .best_move(eif.best_move),
-        .best_score(eif.best_score)
+        .best_score(eif.best_score),
+        .nodes(eif.nodes),
+        .cycles(eif.cycles)
     );
 
     // Stimulus

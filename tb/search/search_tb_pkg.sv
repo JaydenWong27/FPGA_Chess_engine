@@ -12,13 +12,16 @@ package search_tb_pkg;
         logic [5:0] depth;
         logic [15:0] best_move;
         logic signed [15:0] best_score;
+        logic [31:0] nodes;
+        logic [31:0] cycles;
 
         function new(string name = "search_item");
             super.new(name);
         endfunction
 
         function string convert2string();
-            return $sformatf("state = %h depth=%0d best_move=%0h best score=%0d", pos[527:512], depth, best_move , best_score);
+            return $sformatf("state = %h depth=%0d best_move=%0h best score=%0d nodes=%0d cycles=%0d",
+                 pos[527:512], depth, best_move, best_score, nodes, cycles);
         endfunction
     endclass
 
@@ -113,6 +116,8 @@ package search_tb_pkg;
                     end
                     item.best_move = vif.best_move;
                     item.best_score = vif.best_score;
+                    item.nodes = vif.nodes;
+                    item.cycles = vif.cycles;
 
                     `uvm_info("MON", item.convert2string(), UVM_LOW)
                     ap.write(item);
@@ -150,7 +155,7 @@ package search_tb_pkg;
     class search_scoreboard extends uvm_subscriber #(search_item);
     `uvm_component_utils(search_scoreboard)
 
-        logic [31:0] golden [logic [533:0]]; // key {pos, depth}, value {move, score}
+        logic [63:0] golden [logic [533:0]]; // {move, score, nodes}
         int unsigned entries;
         int unsigned mismatches;
         int unsigned counter;
@@ -167,6 +172,7 @@ package search_tb_pkg;
             int n;
             logic [5:0] depth;
             logic [15:0] move, score;
+            logic [31:0] nodes;
 
 
             super.build_phase(phase);
@@ -179,9 +185,9 @@ package search_tb_pkg;
 
             while ($fgets(line, fd) != 0) begin
                 if(line[0] == "#") continue;
-                n = $sscanf(line, "%h %h %h %h", pos, depth, move, score);
-                if (n == 4) begin
-                    golden[{pos, depth}] = {move, score};
+                n = $sscanf(line, "%h %h %h %h %h", pos, depth, move, score, nodes);
+                if (n == 5) begin
+                    golden[{pos, depth}] = {move, score, nodes};
                     entries++;
                 end
             end
@@ -196,7 +202,7 @@ package search_tb_pkg;
         endfunction
 
         function void write(search_item t);
-        logic [31:0] exp;
+        logic [63:0] exp;
         bit bad;
 
         counter++;
@@ -208,14 +214,19 @@ package search_tb_pkg;
 
         exp = golden[{t.pos, t.depth}];
 
-        if (t.best_move !== exp[31:16]) begin
+        if (t.best_move !== exp[63:48]) begin
             bad = 1;
-            `uvm_error("MISMATCH", $sformatf("move: %s expected %h", t.convert2string(), exp[31:16]))
+            `uvm_error("MISMATCH", $sformatf("move: %s expected %h", t.convert2string(), exp[63:48]))
         end
 
-        if (t.best_score !== exp[15:0]) begin
+        if (t.best_score !== exp[47:32]) begin
             bad = 1;
-            `uvm_error("MISMATCH", $sformatf("score: %s expected %0d", t.convert2string(), $signed(exp[15:0])))
+            `uvm_error("MISMATCH", $sformatf("score: %s expected %0d", t.convert2string(), $signed(exp[47:32])))
+        end
+
+        if (t.nodes !== exp[31:0]) begin
+            bad = 1;
+            `uvm_error("MISMATCH", $sformatf("nodes: %s expected %0d", t.convert2string(), exp[31:0]))
         end
 
         if (bad) mismatches++;
