@@ -11,6 +11,8 @@ import chess_pkg::*;
     output logic done,
     output move_t best_move,
     output score_t best_score,
+    output logic [31:0] nodes,
+    output logic [31:0] cycles,
 
 // movegen
 
@@ -244,5 +246,21 @@ always_ff @(posedge clk) begin
         endcase
     end
 end
+
+always_ff @(posedge clk) begin
+    if (!rst_n) begin
+        nodes <= '0;
+        cycles <= '0;
+    end else if (state == IDLE && start) begin
+        nodes <= '0;
+        cycles <= '0;
+    end else if (state != IDLE && state != DONE) begin
+        cycles <= cycles + 1;
+        if (state == NODE) begin
+             nodes <= nodes + 1;
+        end
+    end
+end
+
 
 endmodule

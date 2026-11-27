@@ -13,7 +13,9 @@ import chess_pkg::*;
 
     output logic done,
     output move_t best_move,
-    output score_t best_score
+    output score_t best_score,
+    output logic [31:0] nodes,
+    output logic [31:0] cycles
 );
 
     //movegen group wires
@@ -55,6 +57,8 @@ import chess_pkg::*;
         .done(done),
         .best_move(best_move),
         .best_score(best_score),
+        .nodes(nodes),
+        .cycles(cycles),
 
         // movegen
 
