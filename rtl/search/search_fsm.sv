@@ -60,8 +60,8 @@ endfunction
 typedef enum logic [3:0] {
     IDLE,
     NODE,
+    QS_STAND,
     GEN,
-    EVAL,
     NEXT,
     FETCH,
     PUSH,
@@ -100,18 +100,25 @@ legality u_check (
     .attacked(in_check)
 );
 
+logic qs;
+logic stand_cut;
 logic tactical;
 logic [7:0] total;
+logic keep;
 
+assign keep = mg_move_valid && (!qs || tactical);
+assign stand_cut = (ev_score >= cur.beta) || (ply == MAX_PLY - 1);
+assign qs = (ply >= root_depth);
 assign tactical = mg_move.flags[2] | mg_move.flags[3];
 assign total = cur.ncap + cur.nquiet;
 assign mg_pos = cur.pos;
 assign ev_pos = cur.pos;
 
-assign mg_start = (state == NODE) && (ply != root_depth);
-assign ev_start = (state == NODE) && (ply == root_depth);
+assign mg_start = ((state == NODE) && !qs)
+               || ((state == QS_STAND) && ev_done && !stand_cut);
+assign ev_start = (state == NODE) && qs;
 assign done = state == DONE;
-assign move_we = (state == GEN) && mg_move_valid;
+assign move_we = (state == GEN) && keep;
 assign move_wply = ply;
 assign move_widx = tactical ? cur.ncap : (8'd255 - cur.nquiet);
 assign move_wdata = mg_move;
@@ -157,28 +164,38 @@ always_ff @(posedge clk) begin
                 end
             end
             NODE: begin //decide if this is leaf, one clock and assign alreadypulse
-                if (ply == root_depth) begin
-                    state <= EVAL;
+                if (qs) begin
+                    state <= QS_STAND;
                 end else begin
                     state <= GEN;
                 end
             end
-            EVAL: begin //waiting for eval result
+            QS_STAND: begin
                 if (ev_done) begin
-                    result <= ev_score;
-                    state <= RETURN;
+                    if (stand_cut) begin
+                        result <= ev_score;
+                        state <= RETURN;
+                    end else begin
+                        cur.best <= ev_score;
+                        if (ev_score > cur.alpha)
+                            cur.alpha <= ev_score;
+                        state <= GEN;
+                    end
                 end
             end
             GEN: begin 
-                if (mg_move_valid) begin
-                    if (tactical) cur.ncap <= cur.ncap + 1;
-                    else cur.nquiet <= cur.nquiet + 1;
+                if (keep) begin
+                    if (tactical) cur.ncap   <= cur.ncap + 1;
+                    else          cur.nquiet <= cur.nquiet + 1;
                 end
                 if (mg_done) begin
-                    if (total == 0) begin //No legal moves
-                        result <= in_check ? score_t'(-(MATE - ply)) : score_t'(DRAW);
+                    if (total == 0) begin            // no (kept) moves
+                        if (qs)
+                            result <= cur.best;
+                        else
+                            result <= in_check ? score_t'(-(MATE - ply)) : score_t'(DRAW);
                         state <= RETURN;
-                    end else begin // there are legal moves
+                    end else begin                   // there are moves
                         cur.idx <= '0;
                         state <= NEXT;
                     end
