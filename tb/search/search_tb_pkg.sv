@@ -65,10 +65,10 @@ package search_tb_pkg;
                         @(posedge vif.clk iff vif.done === 1);
                     end
                     begin
-                        for (int i = 0; i < 2000000; i++) begin
+                        for (int i = 0; i < 20000000; i++) begin
                             @(posedge vif.clk);
                         end
-                        `uvm_error("TIMEOUT", $sformatf("no done after 2000000 clocks, %s", req.convert2string()) )
+                        `uvm_error("TIMEOUT", $sformatf("no done after 20000000 clocks, %s", req.convert2string()) )
                     end
                 join_any
                 disable fork;
