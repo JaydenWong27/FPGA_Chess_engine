@@ -1,7 +1,8 @@
 import chess
 from model.reference import random_boards
-from model.search import negamax, alphabeta, search,Stats
+from model.search import negamax, alphabeta, search, Stats
 from model.constants import MATE, INF, DRAW
+
 
 def test_nodes_depth1_startpos():
     stats = Stats()
@@ -33,3 +34,10 @@ def test_takes_free_queen():
 def test_alphabeta_matches_negamax():
     for board in random_boards(20, seed=5):
         assert alphabeta(board, 2, 0, -INF, INF) == negamax(board, 2, 0)
+
+def test_captures_first_keeps_score():
+    for board in random_boards(20, seed=7):
+        for depth in (1, 2, 3):
+            ab_score, _ = search(board, depth)
+            nm_score, _ = negamax(board, depth, 0)
+            assert ab_score == nm_score

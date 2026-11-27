@@ -100,6 +100,11 @@ legality u_check (
     .attacked(in_check)
 );
 
+logic tactical;
+logic [7:0] total;
+
+assign tactical = mg_move.flags[2] | mg_move.flags[3];
+assign total = cur.ncap + cur.nquiet;
 assign mg_pos = cur.pos;
 assign ev_pos = cur.pos;
 
@@ -108,10 +113,10 @@ assign ev_start = (state == NODE) && (ply == root_depth);
 assign done = state == DONE;
 assign move_we = (state == GEN) && mg_move_valid;
 assign move_wply = ply;
-assign move_widx = cur.count;
+assign move_widx = tactical ? cur.ncap : (8'd255 - cur.nquiet);
 assign move_wdata = mg_move;
 assign move_rply = ply;
-assign move_ridx = cur.idx;
+assign move_ridx = (cur.idx < cur.ncap) ? cur.idx : (8'd255 - (cur.idx - cur.ncap));
 assign frame_we = state == PUSH;
 assign frame_waddr = ply;
 assign frame_wdata = cur;
@@ -143,7 +148,8 @@ always_ff @(posedge clk) begin
                     cur.best <= -INF;
                     cur.best_move <= '0;
                     cur.move <= '0;
-                    cur.count <= '0;
+                    cur.ncap <= '0;
+                    cur.nquiet <= '0;
                     cur.idx <= '0;
                     ply <= '0;
                     root_depth <= depth;
@@ -165,10 +171,11 @@ always_ff @(posedge clk) begin
             end
             GEN: begin 
                 if (mg_move_valid) begin
-                    cur.count <= cur.count + 1;
+                    if (tactical) cur.ncap <= cur.ncap + 1;
+                    else cur.nquiet <= cur.nquiet + 1;
                 end
                 if (mg_done) begin
-                    if (cur.count == 0) begin //No legal moves
+                    if (total == 0) begin //No legal moves
                         result <= in_check ? score_t'(-(MATE - ply)) : score_t'(DRAW);
                         state <= RETURN;
                     end else begin // there are legal moves
@@ -178,7 +185,7 @@ always_ff @(posedge clk) begin
                 end
             end
             NEXT: begin
-                if (cur.idx == cur.count) begin // every move has been tried
+                if (cur.idx == total) begin // every move has been tried
                     result <= cur.best;
                     state <= RETURN;
                 end else begin
@@ -198,7 +205,8 @@ always_ff @(posedge clk) begin
                 cur.best <= -INF;
                 cur.best_move <= '0;
                 cur.move <= '0;
-                cur.count <= '0;
+                cur.ncap <= '0;
+                cur.nquiet <= '0;
                 cur.idx <= '0;
                 ply <= ply + 1;
                 state <= NODE;

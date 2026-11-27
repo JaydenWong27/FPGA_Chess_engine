@@ -16,6 +16,9 @@ class Stats:
     def __init__(self):
         self.nodes = 0
 
+def is_tactical(board, move):
+    return board.is_capture(move) or move.promotion is not None
+
 def hw_key(board, move):
     piece   = board.piece_type_at(move.from_square) - 1
     frm     = move.from_square
@@ -28,11 +31,15 @@ def hw_key(board, move):
 
     return (piece, frm, to, promo)
 
+def order_moves(board):
+    return sorted(board.legal_moves,
+                  key=lambda m: (0 if is_tactical(board, m) else 1, hw_key(board , m)))
+
 def negamax(board, depth, ply):
     if (depth == 0):
         return evaluate(from_board(board)), None
 
-    moves = sorted(board.legal_moves, key=lambda m: hw_key(board, m))
+    moves = order_moves(board)
 
     if not moves:
         if (board.is_check() is True):
@@ -60,7 +67,7 @@ def alphabeta(board, depth, ply, alpha, beta, stats=None):
     if (depth == 0):
         return evaluate(from_board(board)), None
 
-    moves = sorted(board.legal_moves, key=lambda m: hw_key(board, m))
+    moves = order_moves(board)
 
     if not moves:
         if (board.is_check() is True):

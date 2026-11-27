@@ -130,7 +130,8 @@ package chess_pkg;
     score_t best;
     move_t best_move;
     move_t move;
-    logic [7:0] count;
+    logic [7:0] ncap;
+    logic [7:0] nquiet;
     logic [7:0] idx; 
   } frame_t;
 
