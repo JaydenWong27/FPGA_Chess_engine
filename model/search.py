@@ -12,6 +12,9 @@ from model.constants import MATE, INF, DRAW
 from model.encode import from_board
 from model.engine_model import evaluate
 
+class Stats:
+    def __init__(self):
+        self.nodes = 0
 
 def hw_key(board, move):
     piece   = board.piece_type_at(move.from_square) - 1
@@ -50,7 +53,10 @@ def negamax(board, depth, ply):
 
     return best, best_move
 
-def alphabeta(board, depth, ply, alpha, beta):
+def alphabeta(board, depth, ply, alpha, beta, stats=None):
+    if stats is not None:
+        stats.nodes += 1
+
     if (depth == 0):
         return evaluate(from_board(board)), None
 
@@ -65,7 +71,7 @@ def alphabeta(board, depth, ply, alpha, beta):
     best_move = None
     for m in moves:
         board.push(m)
-        score, _ = alphabeta(board, depth - 1, ply + 1, -beta, -alpha)
+        score, _ = alphabeta(board, depth - 1, ply + 1, -beta, -alpha, stats)
         score = -score
         board.pop()
 
@@ -81,5 +87,6 @@ def alphabeta(board, depth, ply, alpha, beta):
 
     return best, best_move
 
-def search(board, depth):
-    return alphabeta(board, depth, 0, -INF, INF)
+def search(board, depth, stats=None):
+
+    return alphabeta(board, depth, 0, -INF, INF, stats)

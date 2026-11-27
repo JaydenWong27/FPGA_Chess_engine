@@ -13,7 +13,7 @@ from model.encode import from_board, flatten, move_from_chess
 from model.engine_model import material, pst_score , evaluate
 from model.reference import random_boards
 from model.perft import POSITIONS
-from model.search import search
+from model.search import search, Stats
 
 folder = ROOT / "vectors"
 file_path =  folder / "castle_update.txt"
@@ -115,17 +115,17 @@ def search_boards():
 def gen_search():
     os.makedirs( folder / "search" , exist_ok=True)
     with open(folder / "search" / "search.txt" , "w") as f:
-        f.write("# position depth move score\n")
+        f.write("# position depth move score nodes\n")
         for board in search_boards():
             pos = from_board(board)
             for depth in range(1,4):
-                score, move = search(board, depth)
+                stats = Stats()
+                score, move = search(board, depth, stats)
                 if move is None:
                     m = 0
                 else: 
                     m = move_from_chess(board, move)
-                f.write(f"{flatten(pos):0132x} {depth:02x} {m:04x} {h16(score)}\n")
-
+                f.write(f"{flatten(pos):0132x} {depth:02x} {m:04x} {h16(score)} {stats.nodes:08x}\n")
 
 if __name__ == "__main__":
     gen_castle()
