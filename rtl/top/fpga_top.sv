@@ -28,6 +28,7 @@ logic [5:0] depth;
 logic done;
 move_t best_move;
 score_t best_score;
+logic [31:0] nodes, cycles;
 
 uart_rx u_rx (
     .clk(clk),
@@ -59,7 +60,9 @@ protocol u_proto (
     .depth(depth),
     .done(done),
     .best_move(best_move),
-    .best_score(best_score)
+    .best_score(best_score),
+    .nodes(nodes),
+    .cycles(cycles)
 );
 
 search_top #(
@@ -72,7 +75,9 @@ search_top #(
     .depth(depth),
     .done(done),
     .best_move(best_move),
-    .best_score(best_score)
+    .best_score(best_score),
+    .nodes(nodes),
+    .cycles(cycles)
 );
 
 // LEDs on the A7-Lite light when the pin is low.

@@ -19,7 +19,9 @@ module protocol
     output logic [5:0] depth,
     input logic done,
     input move_t best_move,
-    input score_t best_score
+    input score_t best_score,
+    input logic [31:0] nodes,
+    input logic [31:0] cycles
 );
 
     typedef enum logic [2:0] {
@@ -34,11 +36,11 @@ module protocol
 
     state_t state;
     logic [6:0] byte_cnt;
-    logic [39:0] out_buf;
+    logic [103:0] out_buf;
 
     assign start = (state == GO);
     assign tx_start = (state == SEND) && !tx_busy;
-    assign tx_data = out_buf[39:32];
+    assign tx_data = out_buf[103:96];
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -72,7 +74,7 @@ module protocol
                 end
 
                 WAIT_DONE: if (done) begin
-                    out_buf <= {8'h5A, best_move, best_score};
+                    out_buf <= {8'h5A, best_move, best_score, nodes, cycles};
                     byte_cnt <= '0;
                     state <= SEND;
                 end
@@ -84,8 +86,8 @@ module protocol
                 end
 
                 SEND_WAIT: if (!tx_busy) begin
-                    out_buf <= {out_buf[31:0], 8'h00};
-                    if (byte_cnt == 4) begin
+                    out_buf <= {out_buf[95:0], 8'h00};
+                    if (byte_cnt == 12) begin
                         state <= WAIT_HDR;
                     end else begin
                         byte_cnt <= byte_cnt + 1;
